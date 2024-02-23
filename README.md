@@ -21,4 +21,6 @@ php -d ffi.enable=true -S localhost:8000
 ```
 3. load http://localhost:8000
 
+## Acknowledgements
+Thank you @mariohamann for first prototyping a PHP example in https://github.com/mariohamann/enhance-ssr-wasm/tree/experiment/extism.
 
