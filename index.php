@@ -46,7 +46,6 @@ $htmlDocument = json_decode($output)->document;
 
 echo $htmlDocument . "\n";
 
-
 ?>
 
 
