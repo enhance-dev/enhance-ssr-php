@@ -1,0 +1,19 @@
+{
+  "name": "enhance/enhance-ssr-php",
+  "type": "project",
+  "autoload": {
+    "psr-4": {
+      "EnhanceSsrPhp\\": "/src"
+    }
+  },
+  "authors": [
+    {
+      "name": "ryanbethel",
+      "email": "ryan.bethel@gmail.com"
+    }
+  ],
+  "minimum-stability": "dev",
+  "require": {
+    "extism/extism": "dev-main"
+  }
+}
