@@ -15,5 +15,17 @@
   "minimum-stability": "dev",
   "require": {
     "extism/extism": "dev-main"
+  },
+  "scripts": {
+    "serve": "php -d ffi.enable=true -S localhost:8000 -t public",
+    "post-install-cmd": [
+      "@composer addEnhanceSsrToVendor"
+    ],
+    "post-update-cmd": [
+      "@composer addEnhanceSsrToVendor"
+    ],
+    "addEnhanceSsrToVendor": [
+      "mkdir -p vendor/enhance/ssr-wasm && cd \"$_\" && curl -L https://github.com/enhance-dev/enhance-ssr-wasm/releases/download/v0.0.3/enhance-ssr.wasm.gz | gunzip > enhance-ssr.wasm"
+    ]
   }
 }
