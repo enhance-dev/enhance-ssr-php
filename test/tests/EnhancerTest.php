@@ -331,8 +331,8 @@ HTML;
         $expectedString = <<<HTMLDOC
         <my-bad-xml>
           <h4 slot="title">My list</h4>
-          <img src="/" />
-          <input />
+          <img src="/">
+          <input>
         </my-bad-xml>
 HTMLDOC;
 
@@ -650,10 +650,10 @@ HTML;
        <script type="module">
          class MyTransformScript extends HTMLElement {
            constructor() {
-             super()
+             super();
            }
          }
-         customElements.define('my-transform-script', MyTransformScript)
+         customElements.define("my-transform-script", MyTransformScript);
          my-transform-script
        </script>
        </body>
@@ -666,472 +666,484 @@ HTMLDOC;
             "Script Transform is run"
         );
     }
-    // test('should run style transforms', t => {
-    //   const html = enhance({
-    //     elements: {
-    //       'my-transform-style': MyTransformStyle
-    //     },
-    //     styleTransforms: [
-    //       function({ attrs, raw, tagName, context }) {
-    //         if (attrs.find(i => i.name === "scope")?.value === "global" && context === "template") return ''
-    //         return `
-    //         ${raw}
-    //         /*
-    //         ${tagName} styles
-    //         context: ${context}
-    //         */
-    //         `
 
-    //       }
-    //     ],
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    //   ${Head()}
-    //   <my-transform-style></my-transform-style>
-    //   `
-    //   const expected = `
-    // <!DOCTYPE html>
-    // <html>
-    // <head>
-    // <style>
+    public function testShouldNotAddDuplicateStyleTags()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+            "styleTransforms" => [
+                function ($params) {
+                    $attrs = $params["attrs"];
+                    $raw = $params["raw"];
+                    $tagName = $params["tagName"];
+                    $context = $params["context"];
+                    $globalScope = $attrs["scope"] === "global";
+                    if ($globalScope && $context === "template") {
+                        return "";
+                    }
+                    // Otherwise, return the raw content and additional comment
+                    return <<<CSS
+                    $raw
+                    /*
+                    $tagName styles
+                    context: $context
+                    */
+CSS;
+                },
+            ],
+        ]);
 
-    //   :host {
-    //     display: block;
-    //   }
-    //   /*
-    //   my-transform-style styles
-    //   context: markup
-    //   */
+        $head = HeadTag();
 
-    //   :slot {
-    //     display: inline-block;
-    //   }
-    //   /*
-    //   my-transform-style styles
-    //   context: markup
-    //   */
+        $htmlString = <<<HTML
+        {$head}
+      <my-transform-style></my-transform-style>
+      <my-transform-style></my-transform-style>
+HTML;
 
-    // </style>
-    // </head>
-    // <body>
-    // <my-transform-style>
-    //   <h1>My Transform Style</h1>
-    // </my-transform-style>
-    // <script type="module">
-    //   class MyTransformStyle extends HTMLElement {
-    //     constructor() {
-    //       super()
-    //     }
-    //   }
-    //   customElements.define('my-transform-style', MyTransformStyle)
-    // </script>
-    // </body>
-    // </html>
-    //   `
+        $expectedString = <<<HTMLDOC
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <style>
+        :host {
+            display: block;
+          }
+          /*
+          my-transform-style styles
+          context: markup
+          */
+          :slot {
+            display: inline-block;
+          }
+          /*
+          my-transform-style styles
+          context: markup
+          */
 
-    //   t.equal(strip(actual), strip(expected), 'ran style transform style')
-    //   t.end()
-    // })
+        </style>
+        </head>
+        <body>
+        <my-transform-style>
+          <h1>My Transform Style</h1>
+        </my-transform-style>
+        <my-transform-style>
+          <h1>My Transform Style</h1>
+        </my-transform-style>
+        <script type="module">
+          class MyTransformStyle extends HTMLElement {
+            constructor() {
+              super();
+            }
+          }
+          customElements.define("my-transform-style", MyTransformStyle);
+        </script>
+        </body>
+        </html>
+HTMLDOC;
 
-    // test('should not add duplicated style tags to head', t => {
-    //   const html = enhance({
-    //     elements: {
-    //       'my-transform-style': MyTransformStyle,
-    //     },
-    //     styleTransforms: [
-    //       function({ attrs, raw, tagName, context }) {
-    //         // if tagged as global only add to the head
-    //         if (attrs.find(i => i.name === "scope")?.value === "global" && context === "template") return ''
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Removed Duplicate Style Tags"
+        );
+    }
 
-    //         return `
-    //         ${raw}
-    //         /*
-    //         ${tagName} styles
-    //         context: ${context}
-    //         */
-    //         `
+    public function testShouldRespectAsAttribute()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => true,
+            "enhancedAttr" => false,
+        ]);
 
-    //       }
-    //     ],
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    //   ${Head()}
-    //   <my-transform-style></my-transform-style>
-    //   <my-transform-style></my-transform-style>
-    //   `
-    //   const expected = `
-    // <!DOCTYPE html>
-    // <html>
-    // <head>
-    // <style>
-    // :host {
-    //     display: block;
-    //   }
-    //   /*
-    //   my-transform-style styles
-    //   context: markup
-    //   */
-    //   :slot {
-    //     display: inline-block;
-    //   }
-    //   /*
-    //   my-transform-style styles
-    //   context: markup
-    //   */
+        $htmlString = <<<HTML
+          <my-slot-as></my-slot-as>
+HTML;
 
-    // </style>
-    // </head>
-    // <body>
-    // <my-transform-style>
-    //   <h1>My Transform Style</h1>
-    // </my-transform-style>
-    // <my-transform-style>
-    //   <h1>My Transform Style</h1>
-    // </my-transform-style>
-    // <script type="module">
-    //   class MyTransformStyle extends HTMLElement {
-    //     constructor() {
-    //       super()
-    //     }
-    //   }
-    //   customElements.define('my-transform-style', MyTransformStyle)
-    // </script>
-    // </body>
-    // </html>
-    //   `
+        $expectedString = <<<HTMLDOC
+        <my-slot-as>
+          <div slot="stuff">
+            stuff
+          </div>
+        </my-slot-as>
+HTMLDOC;
 
-    //   t.equal(strip(actual), strip(expected), 'removed duplicate style sheet')
-    //   t.end()
-    // })
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Respects as attribute"
+        );
+    }
 
-    // test('should respect as attribute', t => {
-    //   const html = enhance({
-    //     bodyContent: true,
-    //     elements: {
-    //       'my-slot-as': MySlotAs
-    //     },
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    //   <my-slot-as></my-slot-as>
-    //   `
-    //   const expected = `
-    //   <my-slot-as>
-    //     <div slot="stuff">
-    //       stuff
-    //     </div>
-    //   </my-slot-as>
-    //   `
-    //   t.equal(strip(actual), strip(expected), 'respects as attribute')
-    //   t.end()
-    // })
+    public function testShouldAddMultipleExternalScritps()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+            "scriptTransforms" => [
+                function ($params) {
+                    return "{$params["raw"]}\n{$params["tagName"]}";
+                },
+            ],
+        ]);
 
-    // test('should add multiple external scripts', t => {
-    //   const html = enhance({
-    //     elements: {
-    //       'my-external-script': MyExternalScript
-    //     },
-    //     scriptTransforms: [
-    //       function({ attrs, raw, tagName }) {
-    //         return `${raw}\n${tagName}`
-    //       }
-    //     ],
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    //   ${Head()}
-    //   <my-external-script></my-external-script>
-    //   <my-external-script></my-external-script>
-    //   `
-    //   const expected = `
-    // <!DOCTYPE html>
-    // <html>
-    // <head>
-    // </head>
-    // <body>
-    //   <my-external-script>
-    //     <input type="range">
-    //   </my-external-script>
-    //   <my-external-script>
-    //     <input type="range">
-    //   </my-external-script>
-    //   <script type="module" src="_static/range.mjs"></script>
-    //   <script src="_static/another.mjs"></script>
-    // </body>
-    // </html>
-    //   `
-    //   t.equal(strip(actual), strip(expected), 'Adds multiple external scripts')
-    //   t.end()
-    // })
+        $head = HeadTag();
 
-    // test('should support unnamed slot without whitespace', t => {
-    //   const html = enhance({
-    //     bodyContent: true,
-    //     elements: {
-    //       'my-unnamed': MyUnnamed
-    //     },
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    //   <my-unnamed>My Text</my-unnamed>
-    //   `
-    //   const expected = `
-    //   <my-unnamed>My Text</my-unnamed>
-    // `
+        $htmlString = <<<HTML
+        $head
+        <my-external-script></my-external-script>
+        <my-external-script></my-external-script>
+HTML;
 
-    //   t.equal(
-    //     strip(actual),
-    //     strip(expected),
-    //     'Renders content without whitepace into unnamed slot'
-    //   )
-    //   t.end()
-    // })
+        $expectedString = <<<HTMLDOC
+        <!DOCTYPE html>
+        <html>
+        <head>
+        </head>
+        <body>
+          <my-external-script>
+            <input type="range">
+          </my-external-script>
+          <my-external-script>
+            <input type="range">
+          </my-external-script>
+          <script type="module" src="_static/range.mjs"></script>
+          <script src="_static/another.mjs"></script>
+        </body>
+        </html>
+HTMLDOC;
 
-    // test('should support nested custom elements with nested slots', t => {
-    //   const html = enhance({
-    //     bodyContent: true,
-    //     elements: {
-    //       'my-heading': MyHeading,
-    //       'my-super-heading': MySuperHeading
-    //     },
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    //   <my-super-heading>
-    //     <span slot="emoji">
-    //       ✨
-    //     </span>
-    //     My Heading
-    //   </my-super-heading>
-    //   `
-    //   const expected = `
-    //   <my-super-heading>
-    //     <span slot="emoji">
-    //       ✨
-    //     </span>
-    //     <my-heading>
-    //       <h1>
-    //         My Heading
-    //       </h1>
-    //     </my-heading>
-    //   </my-super-heading>
-    // `
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Adds multiple external scripts"
+        );
+    }
 
-    //   t.equal(
-    //     strip(actual),
-    //     strip(expected),
-    //     'Renders nested slots in nested custom elements'
-    //   )
-    //   t.end()
-    // })
+    public function testShouldSupportUnnamedSlotWithoutWhitespace()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => true,
+            "enhancedAttr" => false,
+        ]);
 
-    // test('should not fail when passed a custom element without a template function', t => {
-    //   const html = enhance()
-    //   const out = html`<noop-noop></noop-noop>`
-    //   t.ok(out, 'Does not fail when passed a custom element that has no template function')
-    //   t.end()
-    // })
+        $head = HeadTag();
 
-    // test('should supply instance ID', t => {
-    //   const html = enhance({
-    //     bodyContent: true,
-    //     uuidFunction: function() { return 'abcd1234' },
-    //     elements: {
-    //       'my-instance-id': MyInstanceID
-    //     },
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    //   <my-instance-id></my-instance-id>
-    //   `
-    //   const expected = `
-    // <my-instance-id>
-    //   <p>abcd1234</p>
-    // </my-instance-id>
-    //   `
-    //   t.equal(
-    //     strip(actual),
-    //     strip(expected),
-    //     'Has access to instance ID'
-    //   )
-    //   t.end()
-    // })
+        $htmlString = <<<HTML
+        <my-unnamed>My Text</my-unnamed>
+HTML;
 
-    // test('should supply context', t => {
-    //   const html = enhance({
-    //     bodyContent: true,
-    //     elements: {
-    //       'my-context-parent': MyContextParent,
-    //       'my-context-child': MyContextChild
-    //     },
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    //   <my-context-parent message="hmmm">
-    //     <div>
-    //       <span>
-    //         <my-context-child></my-context-child>
-    //       </span>
-    //     </div>
-    //     <my-context-parent message="sure">
-    //       <my-context-child></my-context-child>
-    //     </my-context-parent>
-    //   </my-context-parent>
-    //   `
-    //   const expected = `
-    //   <my-context-parent message="hmmm">
-    //     <div>
-    //       <span>
-    //         <my-context-child>
-    //           <span>hmmm</span>
-    //         </my-context-child>
-    //       </span>
-    //     </div>
-    //     <my-context-parent message="sure">
-    //       <my-context-child>
-    //         <span>sure</span>
-    //       </my-context-child>
-    //     </my-context-parent>
-    //   </my-context-parent>
-    //   `
-    //   t.equal(
-    //     strip(actual),
-    //     strip(expected),
-    //     'Passes context data to child elements'
-    //   )
-    //   t.end()
+        $expectedString = <<<HTMLDOC
+        <my-unnamed>My Text</my-unnamed>
+HTMLDOC;
 
-    // })
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Unnamed slot without whitespace"
+        );
+    }
 
-    // test('move link elements to head', t => {
-    //   const html = enhance({
-    //     elements: {
-    //       'my-link-node-first': MyLinkNodeFirst,
-    //       'my-link-node-second': MyLinkNodeSecond
-    //     },
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    // ${Head()}
-    // <my-link-node-first>first</my-link-node-first>
-    // <my-link-node-second>second</my-link-node-second>
-    // <my-link-node-first>first again</my-link-node-first>
-    //   `
-    //   const expected = `
-    // <!DOCTYPE html>
-    // <html>
-    // <head>
-    // <link rel="stylesheet" href="my-link-node-first.css">
-    // <link rel="stylesheet" href="my-link-node-second.css">
-    // </head>
-    // <body>
-    // <my-link-node-first>first</my-link-node-first>
-    // <my-link-node-second>second</my-link-node-second>
-    // <my-link-node-first>first again</my-link-node-first>
-    // </body>
-    // </html>
-    // `
-    //   t.equal(
-    //     strip(actual),
-    //     strip(expected),
-    //     'moves deduplicated link elements to the head'
-    //   )
-    //   t.end()
-    // })
+    public function testShouldSupportNestedCustomElementWithNestedSlot()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+        ]);
 
-    // test('should hoist css imports', t => {
-    //   const html = enhance({
-    //     elements: {
-    //       'my-style-import-first': MyStyleImportFirst,
-    //       'my-style-import-second': MyStyleImportSecond
-    //     },
-    //     enhancedAttr: false
-    //   })
-    //   const actual = html`
-    //   ${Head()}
-    //   <my-style-import-first></my-style-import-first>
-    //   <my-style-import-second></my-style-import-second>
-    //   `
+        $head = HeadTag();
 
-    //   const expected = `
-    //   <!DOCTYPE html>
-    //   <html>
-    //   <head>
-    //   <style>
-    //   @import 'my-style-import-first.css';
-    //   @import 'my-style-import-second.css';
-    //   my-style-import-first { display: block }
-    //   my-style-import-second { display: block }
-    //   </style>
-    //   </head>
-    //   <body>
-    //   <my-style-import-first></my-style-import-first>
-    //   <my-style-import-second></my-style-import-second>
-    //   </body>
-    //   </html>
-    //   `
-    //   t.equal(strip(actual), strip(expected), 'Properly hoists CSS imports')
-    //   t.end()
-    // })
+        $htmlString = <<<HTML
+        <!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>
+        <my-super-heading>
+          <span slot="emoji">
+            ✨
+          </span>
+          My Heading
+        </my-super-heading>
+        </body></html>
+HTML;
 
-    // test('Should render nested named slot inside unnamed slot', t => {
+        $expectedString = <<<HTMLDOC
+        <!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>
+        <my-super-heading>
+          <span slot="emoji">
+            ✨
+          </span>
+          <my-heading>
+            <h1>
+              My Heading
+            </h1>
+          </my-heading>
+        </my-super-heading>
+        </body></html>
+HTMLDOC;
 
-    //   const html = enhance({
-    //     bodyContent: true,
-    //     elements: {
-    //       'my-custom-heading': MyCustomHeading,
-    //       'my-custom-heading-with-named-slot': MyCustomHeadingWithNamedSlot
-    //     },
-    //     enhancedAttr: false
-    //   })
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Renders nested slots in nested custom elements"
+        );
+    }
 
-    //   const actual = html`
-    //     <my-custom-heading-with-named-slot>
-    //       <span slot="heading-text">Here's my text</span>
-    //     </my-custom-heading-with-named-slot>
-    //   `
-    //   const expected = `
-    //     <my-custom-heading-with-named-slot>
-    //       <my-custom-heading>
-    //         <h1>
-    //           <span slot="heading-text">Here's my text</span>
-    //         </h1>
-    //       </my-custom-heading>
-    //     </my-custom-heading-with-named-slot>
-    //   `
+    public function testShouldNotFailWhenPassedCustomElementWithoutTemplate()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => true,
+            "enhancedAttr" => false,
+        ]);
 
-    //   t.equal(
-    //     strip(actual),
-    //     strip(expected),
-    //     'Renders nested named slot inside unnamed slot'
-    //   )
-    //   t.end()
-    // })
+        $head = HeadTag();
 
-    // test('multiple slots with unnamed slot first', t => {
-    //   const html = enhance({
-    //     bodyContent: true,
-    //     elements: {
-    //       'multiple-slots': MultipleSlots,
-    //     }
-    //   })
-    //   const actual = html`
-    //   <multiple-slots>unnamed slot<div slot="slot1">slot One</div></multiple-slots>
-    //   `
-    //   const expected = `
-    // <multiple-slots enhanced="✨">
-    //   unnamed slot<div slot="slot1">slot One</div>
-    // </multiple-slots>
-    // `
-    //   t.equal(
-    //     strip(actual),
-    //     strip(expected),
-    //     'Unnamed and named slots work together'
-    //   )
-    //   t.end()
-    // })
+        $htmlString = <<<HTML
+        <noop-noop></noop-noop>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <noop-noop></noop-noop>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Does not fail when passed custom element without template"
+        );
+    }
+
+    public function testShouldSupplyInstanceID()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => true,
+            "uuidFunction" => function () {
+                return "abcd1234";
+            },
+            "enhancedAttr" => false,
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        <my-instance-id></my-instance-id>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <my-instance-id>
+        <p>abcd1234</p>
+        </my-instance-id>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Has access to instance ID"
+        );
+    }
+
+    public function testShouldSupplyContext()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => true,
+            "enhancedAttr" => false,
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        <my-context-parent message="hmmm">
+          <div>
+            <span>
+              <my-context-child></my-context-child>
+            </span>
+          </div>
+          <my-context-parent message="sure">
+            <my-context-child></my-context-child>
+          </my-context-parent>
+        </my-context-parent>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <my-context-parent message="hmmm">
+          <div>
+            <span>
+              <my-context-child>
+                <span>hmmm</span>
+              </my-context-child>
+            </span>
+          </div>
+          <my-context-parent message="sure">
+            <my-context-child>
+              <span>sure</span>
+            </my-context-child>
+          </my-context-parent>
+        </my-context-parent>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Passes context data to child elements"
+        );
+    }
+
+    public function testShouldMoveLinkElementsToTheHead()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        $head
+        <my-link-node-first>first</my-link-node-first>
+        <my-link-node-second>second</my-link-node-second>
+        <my-link-node-first>first again</my-link-node-first>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <link rel="stylesheet" href="my-link-node-first.css">
+        <link href="my-link-node-second.css" rel="stylesheet">
+        </head>
+        <body>
+        <my-link-node-first>first</my-link-node-first>
+        <my-link-node-second>second</my-link-node-second>
+        <my-link-node-first>first again</my-link-node-first>
+        </body>
+        </html>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Moves deduplicated link elements to the head"
+        );
+    }
+
+    public function testShouldHoistCssImports()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        $head
+        <my-style-import-first></my-style-import-first>
+        <my-style-import-second></my-style-import-second>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <style>
+        @import "my-style-import-first.css";
+        @import "my-style-import-second.css";
+        my-style-import-first {display: block;}
+        my-style-import-second {display: block;}
+        </style>
+        </head>
+        <body>
+        <my-style-import-first></my-style-import-first>
+        <my-style-import-second></my-style-import-second>
+        </body>
+        </html>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "CSS imports are hoisted"
+        );
+    }
+
+    public function testShouldRenderNestedSlotsInsideUnnamedSlot()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => true,
+            "enhancedAttr" => false,
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        <my-custom-heading-with-named-slot>
+          <span slot="heading-text">Here's my text</span>
+        </my-custom-heading-with-named-slot>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <my-custom-heading-with-named-slot>
+          <my-custom-heading>
+            <h1>
+              <span slot="heading-text">Here's my text</span>
+            </h1>
+          </my-custom-heading>
+        </my-custom-heading-with-named-slot>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Renders nested named slot inside unnamed slot"
+        );
+    }
+    public function testMultipleSlotsWithUnnamedSlotFirst()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => true,
+            "enhancedAttr" => true,
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        <multiple-slots>unnamed slot<div slot="slot1">slot One</div></multiple-slots>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <multiple-slots enhanced="✨">
+          unnamed slot<div slot="slot1">slot One</div>
+        </multiple-slots>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Unnamed and named slots work together"
+        );
+    }
 }
 
 function HeadTag()

@@ -9,6 +9,8 @@ use DOMNode;
 use DOMNodeList;
 use DOMXPath;
 use DOMText;
+use libxml_set_encoding;
+// use tidy;
 
 class Enhancer
 {
@@ -48,8 +50,8 @@ class Enhancer
 
     public function ssr($htmlString)
     {
-        $doc = new DOMDocument();
-        @$doc->loadHTML($htmlString, LIBXML_HTML_NODEFDTD);
+        $doc = new DOMDocument(1.0, "UTF-8");
+        @$doc->loadHTML($htmlString, LIBXML_HTML_NODEFDTD | LIBXML_NOERROR);
 
         $htmlElement = $doc->getElementsByTagName("html")->item(0);
         $bodyElement = $htmlElement
@@ -64,9 +66,8 @@ class Enhancer
             "collectedScripts" => [],
             "collectedLinks" => [],
         ];
+        $collected = $this->processCustomElements($bodyElement);
         if ($bodyElement) {
-            $collected = $this->processCustomElements($bodyElement);
-
             if (count($collected["collectedScripts"]) > 0) {
                 $flattenedScripts = $this->flattenArray(
                     $collected["collectedScripts"]
@@ -84,7 +85,56 @@ class Enhancer
                 return $bodyContents;
             }
         }
+        if ($headElement && !$this->options["bodyContent"]) {
+            if (count($collected["collectedStyles"]) > 0) {
+                $flattenedStyles = $this->flattenArray(
+                    $collected["collectedStyles"]
+                );
+                $uniqueStyles = $this->uniqueTags($flattenedStyles);
+                $cssBlocks = [];
+                foreach ($uniqueStyles as $style) {
+                    $cssBlocks[] = $style->childNodes[0]->nodeValue;
+                }
+                $values = array_values($cssBlocks);
+                usort($values, function ($a, $b) {
+                    $aStart = substr(trim($a), 0, 7);
+                    $bStart = substr(trim($b), 0, 7);
+                    if ($aStart === "@import" && $bStart !== "@import") {
+                        return -1;
+                    }
+                    if ($aStart !== "@import" && $bStart === "@import") {
+                        return 1;
+                    }
+                    return 0;
+                });
+                $mergedCssString = implode("\n", $values);
+                $mergedStyles = $mergedCssString
+                    ? "<style>{$mergedCssString}</style>"
+                    : "";
 
+                $tempDoc = new DOMDocument(1.0, "UTF-8");
+                $tempDoc->loadHTML($mergedStyles, LIBXML_HTML_NODEFDTD);
+                $loadedStyle = $tempDoc->getElementsByTagName("style")->item(0);
+                $importedStyles = $headElement->ownerDocument->importNode(
+                    $loadedStyle,
+                    true
+                );
+                $headElement->appendChild($importedStyles);
+            }
+        }
+
+        if ($headElement && !$this->options["bodyContent"]) {
+            if (count($collected["collectedLinks"]) > 0) {
+                $flattenedLinks = $this->flattenArray(
+                    $collected["collectedLinks"]
+                );
+                $uniqueLinks = $this->uniqueAttributeSet($flattenedLinks);
+
+                $this->appendNodes($headElement, $uniqueLinks);
+            }
+        }
+
+        $doc->encoding = "UTF-8";
         return $doc->saveHTML();
     }
 
@@ -169,11 +219,7 @@ class Enhancer
     private function fillSlots($template, $node)
     {
         $slots = $this->findSlots($template);
-        print_r("Slots: \n");
-        print_r($this->printNodes($slots));
         $inserts = $this->findInserts($node);
-        print_r("Inserts: \n");
-        print_r($this->printNodes($inserts));
 
         $usedSlots = [];
         $usedInserts = [];
@@ -208,8 +254,6 @@ class Enhancer
             }
         }
 
-        print_r("unnamedSlots: \n");
-        print_r($this->printNodes($unnamedSlots));
         foreach ($unnamedSlots as $slot) {
             $unnamedChildren = [];
             foreach ($node->childNodes as $child) {
@@ -217,8 +261,6 @@ class Enhancer
                     $unnamedChildren[] = $child;
                 }
             }
-            print_r("unnamedChildren: \n");
-            print_r($this->printNodes($unnamedChildren));
 
             $slotDocument = $slot->ownerDocument;
             $slotParent = $slot->parentNode;
@@ -241,11 +283,6 @@ class Enhancer
                 $unusedSlots[] = $slot;
             }
         }
-        print_r("unused slots: \n");
-        print_r($this->printNodes($unusedSlots));
-        print_r("template: \n");
-        print_r($template->ownerDocument->saveHTML($template));
-        print_r($template);
         $this->replaceSlots($template, $unusedSlots);
         while ($node->firstChild) {
             $node->removeChild($node->firstChild);
@@ -259,15 +296,9 @@ class Enhancer
 
     private function findSlots(DOMNode $node)
     {
-        print_r("node: \n");
-        print_r($node->ownerDocument->saveHTML());
         $xpath = new DOMXPath($node->ownerDocument);
         $slots = $xpath->query(".//slot", $node);
-        print_r("Slots: \n");
-        print_r($slots);
         $slotArray = [];
-        print_r("SlotsArray: \n");
-        print_r($this->printNodes($slotArray));
         foreach ($slots as $slot) {
             $slotArray[] = $slot;
         }
@@ -288,10 +319,6 @@ class Enhancer
 
     private function replaceSlots(DOMNode $node, $slots)
     {
-        print_r("replace slots: \n");
-        print_r($this->printNodes($slots));
-        print_r("node: \n");
-        print_r($node->ownerDocument->saveHTML($node));
         foreach ($slots as $slot) {
             $value = $slot->getAttribute("name");
             $asTag = $slot->hasAttribute("as")
@@ -347,23 +374,12 @@ class Enhancer
             "state" => $state,
         ]);
 
-        print_r("tagName: \n");
-        print_r($tagName);
-
-        print_r("frag: \n");
-        print_r($frag);
-
-        print_r("frag: \n");
-        print_r($frag->ownerDocument->saveHTML());
-
         $styles = [];
         $scripts = [];
         $links = [];
 
         foreach ($frag->childNodes as $childNode) {
             if ($childNode->nodeName === "script") {
-                print_r("Script: \n");
-                print_r($scripts);
                 $transformedScript = $this->applyScriptTransforms([
                     "node" => $childNode,
                     "scriptTransforms" => $scriptTransforms,
@@ -387,8 +403,6 @@ class Enhancer
             }
         }
 
-        print_r("Parts: \n");
-        print_r($this->printNodes(array_merge($scripts, $styles, $links)));
         foreach (array_merge($scripts, $styles, $links) as $part) {
             $part->parentNode->removeChild($part);
         }
@@ -421,7 +435,6 @@ class Enhancer
             }
 
             if (!empty($out)) {
-                // $node->textContent = $out;
                 $node->firstChild->nodeValue = $out;
             }
         }
@@ -482,12 +495,23 @@ class Enhancer
         $state = $params["state"] ?? [];
 
         $state["attrs"] = $attrs;
-        $doc = new DOMDocument();
+        $doc = new DOMDocument(1.0, "UTF-8");
         $rendered = $elements->execute($name, $state);
+        // $config = [
+        //     "clean" => true,
+        //     "output-xhtml" => true,
+        //     "show-body-only" => true,
+        //     "wrap" => 0,
+        // ];
+        // $html =
+        //     "<!DOCTYPE html><html><head><title>Fragment</title></head><body>" .
+        //     $rendered .
+        //     "</body></html>";
+
+        // $cleanRendered = tidy_repair_string($rendered, $config, "utf8");
+        // $cleanRendered = $rendered;
         $fragment = $doc->createDocumentFragment();
         $fragment->appendXML($rendered);
-        print_r("renderTemplate: \n");
-        print_r($fragment->ownerDocument->saveHTML());
         return $fragment;
     }
 
@@ -500,23 +524,41 @@ class Enhancer
 
     //     $state["attrs"] = $attrs;
     //     $doc = new DOMDocument();
-    //     // $doc->preserveWhiteSpace = false;
-    //     // $doc->formatOutput = true;
+    //     $doc->preserveWhiteSpace = false;
+    //     $doc->formatOutput = true;
     //     $rendered = $elements->execute($name, $state);
+    //     $config = [
+    //         // "clean" => true,
+    //         "output-html" => true,
+    //         "show-body-only" => true,
+    //         "wrap" => 0,
+    //     ];
+
+    //     $html =
+    //         "<!DOCTYPE html><html><head><title>Fragment</title></head><body>" .
+    //         $rendered .
+    //         "</body></html>";
+
+    //     // libxml_use_internal_errors(true); // Again, suppressing errors for robustness
+    //     $cleanRendered = tidy_repair_string($html, $config, "utf8");
+
+    //     print_r("cleaned: \n");
+    //     print_r($cleanRendered);
     //     @$doc->loadHTML(
-    //         $rendered,
+    //         $cleanRendered,
+    //         // LIBXML_HTML_NODEFDTD
     //         LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
     //     );
-    //     $fragment = $doc->createDocumentFragment();
-    //     foreach (
-    //         $doc->getElementsByTagName("body")->item(0)->childNodes
-    //         as $child
-    //     ) {
-    //         $fragment->appendChild($child, true);
-    //     }
 
     //     print_r("renderTemplate: \n");
-    //     print_r($fragment->ownerDocument->saveHTML());
+    //     print_r($doc->saveHTML());
+    //     $fragment = $doc->createDocumentFragment();
+
+    //     $body = $doc->getElementsByTagName("body")->item(0);
+    //     foreach ($body->childNodes as $child) {
+    //         $fragment->appendChild($child);
+    //     }
+
     //     return $fragment;
     // }
 
@@ -562,13 +604,32 @@ class Enhancer
         return preg_match($regex, $tagName) === 1;
     }
 
+    private function uniqueAttributeSet($tags)
+    {
+        if (count($tags, COUNT_RECURSIVE) > 0) {
+            $hashTable = [];
+            foreach ($tags as $tagNode) {
+                $attributes = $this->getNodeAttributes($tagNode);
+                ksort($attributes);
+                $attributesString = json_encode($attributes);
+                $hash = md5($attributesString);
+                if (!array_key_exists($hash, $hashTable)) {
+                    $hashTable[$hash] = $tagNode;
+                }
+            }
+            return array_values($hashTable);
+        } else {
+            return $tags;
+        }
+    }
     private static function uniqueTags($tags)
     {
         if (count($tags, COUNT_RECURSIVE) > 0) {
             $hashTable = [];
             foreach ($tags as $tagNode) {
-                $tagContent = $tagNode->textContent;
-                $hash = md5($tagContent);
+                $tagDoc = $tagNode->ownerDocument;
+                $tagString = $tagDoc->saveHTML($tagNode);
+                $hash = md5($tagString);
                 if (!array_key_exists($hash, $hashTable)) {
                     $hashTable[$hash] = $tagNode;
                 }

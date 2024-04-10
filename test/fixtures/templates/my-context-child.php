@@ -1,5 +1,8 @@
 <?php
 function MyContextChild($state)
 {
-    return "<span>{$state["attrs"]["message"]}</span>";
+    print_r("MyContextChild-----------------\n");
+    print_r($state);
+    $message = $state["context"]["message"] ?? "default message";
+    return "<span>{$message}</span>";
 }
