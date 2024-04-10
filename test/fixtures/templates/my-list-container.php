@@ -1,7 +1,8 @@
 <?php
 function MyListContainer($state)
 {
-    $items = $state["attrs"]["items"];
+    // $items = $state["attrs"]["items"] ?? [];
+    $items = "";
     return <<<HTML
 <h2>My List Container</h2>
 <slot name="title">

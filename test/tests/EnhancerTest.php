@@ -4,6 +4,7 @@ require "vendor/autoload.php";
 use PHPUnit\Framework\TestCase;
 use Enhance\Enhancer;
 use Enhance\Elements;
+use Enhance\ShadyStyles;
 
 global $allElements;
 $allElements = new Elements(__DIR__ . "/../fixtures/templates");
@@ -445,11 +446,19 @@ HTMLDOC;
 
     public function testFillNestedRenderedSlots()
     {
+        //TODO: This tests is modified from the JS version to use the Store. We need to reconcile the two tests
         global $allElements;
         $enhancer = new Enhancer([
             "elements" => $allElements,
             "bodyContent" => false,
             "enhancedAttr" => false,
+            "initialState" => [
+                "items" => [
+                    ["title" => "one"],
+                    ["title" => "two"],
+                    ["title" => "three"],
+                ],
+            ],
         ]);
         $head = HeadTag();
 
@@ -1142,6 +1151,54 @@ HTMLDOC;
             strip($expectedString),
             strip($enhancer->ssr($htmlString)),
             "Unnamed and named slots work together"
+        );
+    }
+
+    public function testStyleTransform()
+    {
+        global $allElements;
+        $scopeMyStyle = new ShadyStyles();
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+            "styleTransforms" => [
+                function ($params) use ($scopeMyStyle) {
+                    return $scopeMyStyle->styleTransform($params);
+                },
+            ],
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        $head
+        <my-style-transform><p class="yup">Hello</p></my-style-transform>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                my-style-transform {
+                display: block;
+                }
+                my-style-transform .yup {
+                color: red;
+                }
+            </style>
+        </head>
+        <body>
+            <my-style-transform><p class="yup">Hello</p></my-style-transform>
+        </body>
+        </html>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Style transform worked"
         );
     }
 }

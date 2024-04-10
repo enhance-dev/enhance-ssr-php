@@ -7,7 +7,7 @@ function MyList($state)
         $listItems = implode(
             "",
             array_map(function ($item) {
-                $title = $item["title"];
+                $title = $item["title"] ?? "";
                 return "<li>{$title}</li>";
             }, $items)
         );

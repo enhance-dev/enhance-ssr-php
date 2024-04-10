@@ -15,7 +15,8 @@
   ],
   "minimum-stability": "dev",
   "require": {
-    "extism/extism": "dev-main"
+    "extism/extism": "dev-main",
+    "sabberworm/php-css-parser": "^9.0@dev"
   },
   "scripts": {
     "serve": "php -d ffi.enable=true -S localhost:8000 -t public",
