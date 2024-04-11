@@ -2,7 +2,7 @@
   "name": "enhance-dev/ssr",
   "description": "A PHP library for server-side rendering with Enhance",
   "type": "library",
-  "license": "Apache2",
+  "license": "Apache-2.0",
   "autoload": {
     "psr-4": {
       "Enhance\\": "src/",
