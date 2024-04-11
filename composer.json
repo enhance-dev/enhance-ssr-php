@@ -1,31 +1,37 @@
 {
-  "name": "enhance/enhance-ssr-php",
-  "type": "project",
+  "name": "enhance-dev/ssr",
+  "description": "A PHP library for server-side rendering with Enhance",
+  "type": "library",
+  "license": "Apache2",
   "autoload": {
     "psr-4": {
-      "EnhanceSsrPhp\\": "/src"
+      "Enhance\\": "src/",
+      "Enhance\\Tests\\": "test/tests/"
     }
   },
   "authors": [
     {
-      "name": "ryanbethel",
-      "email": "ryan.bethel@gmail.com"
+      "name": "Ryan Bethel",
+      "email": "ryan.bethel@begin.com"
     }
   ],
   "minimum-stability": "dev",
   "require": {
-    "extism/extism": "dev-main"
+    "extism/extism": "dev-main",
+    "sabberworm/php-css-parser": "^9.0@dev"
   },
   "scripts": {
-    "serve": "php -d ffi.enable=true -S localhost:8000 -t public",
-    "post-install-cmd": [
-      "@composer addEnhanceSsrToVendor"
-    ],
-    "post-update-cmd": [
-      "@composer addEnhanceSsrToVendor"
-    ],
-    "addEnhanceSsrToVendor": [
-      "mkdir -p vendor/enhance/ssr-wasm && cd \"$_\" && curl -L https://github.com/enhance-dev/enhance-ssr-wasm/releases/download/v0.0.3/enhance-ssr.wasm.gz | gunzip > enhance-ssr.wasm"
+    "serve-wasm": "php -d ffi.enable=true -S localhost:8000 -t examples/wasm-ssr/public",
+    "serve-native": "php -S localhost:8000 -t examples/native-ssr/public",
+    "test": "phpunit",
+    "test-filter": "phpunit --filter $1",
+    "post-install-cmd": ["@composer addEnhanceSsrWasmToVendor"],
+    "post-update-cmd": ["@composer addEnhanceSsrWasmToVendor"],
+    "addEnhanceSsrWasmToVendor": [
+      "mkdir -p vendor/enhance/ssr-wasm && cd \"$_\" && curl -L https://github.com/enhance-dev/enhance-ssr-wasm/releases/download/v0.0.4/enhance-ssr.wasm.gz | gunzip > enhance-ssr.wasm"
     ]
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.1@dev"
   }
 }
