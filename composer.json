@@ -22,9 +22,9 @@
   },
   "scripts": {
     "serve-wasm": "php -d ffi.enable=true -S localhost:8000 -t examples/wasm-ssr/public",
-    "serve": "php -S localhost:8000 -t examples/native-ssr/public",
+    "serve-native": "php -S localhost:8000 -t examples/native-ssr/public",
     "test": "phpunit",
-    "test-specific": "phpunit --filter $1",
+    "test-filter": "phpunit --filter $1",
     "post-install-cmd": ["@composer addEnhanceSsrWasmToVendor"],
     "post-update-cmd": ["@composer addEnhanceSsrWasmToVendor"],
     "addEnhanceSsrWasmToVendor": [
