@@ -689,7 +689,8 @@ HTMLDOC;
                     $raw = $params["raw"];
                     $tagName = $params["tagName"];
                     $context = $params["context"];
-                    $globalScope = $attrs["scope"] === "global";
+                    $globalScope =
+                        isset($attrs["scope"]) && $attrs["scope"] === "global";
                     if ($globalScope && $context === "template") {
                         return "";
                     }
@@ -1199,6 +1200,51 @@ HTMLDOC;
             strip($expectedString),
             strip($enhancer->ssr($htmlString)),
             "Style transform worked"
+        );
+    }
+
+    public function testMyHeaderStyle()
+    {
+        global $allElements;
+        $scopeMyStyle = new ShadyStyles();
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+            "styleTransforms" => [
+                function ($params) use ($scopeMyStyle) {
+                    return $scopeMyStyle->styleTransform($params);
+                },
+            ],
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        $head
+        <my-header>Hello World</my-header>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                my-header h1 {
+                color: red;
+                }
+            </style>
+        </head>
+        <body>
+            <my-header><h1>Hello World</h1></my-header>
+        </body>
+        </html>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "My Header style worked"
         );
     }
 }

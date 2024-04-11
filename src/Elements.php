@@ -6,10 +6,25 @@ use Exception;
 class Elements
 {
     private $elements = [];
+    public $wasmElements = null;
 
-    public function __construct($path = null)
+    public function __construct($path = null, $options = null)
     {
-        if ($path && is_dir($path)) {
+        if ($options && $options["wasm"] === true && $path && is_dir($path)) {
+            $dirHandle = opendir($path);
+            if ($dirHandle) {
+                while (($filename = readdir($dirHandle)) !== false) {
+                    $filePath = $path . "/" . $filename;
+                    if (is_file($filePath)) {
+                        $key = pathinfo($filename, PATHINFO_FILENAME);
+                        $content = file_get_contents($filePath);
+                        $this->wasmElements[$key] = $content;
+                    }
+                }
+                closedir($dirHandle);
+            }
+            return;
+        } elseif ($path && is_dir($path)) {
             // Load PHP files
             foreach (glob("$path/*.php") as $file) {
                 require_once $file;

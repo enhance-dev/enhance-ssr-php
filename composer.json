@@ -1,6 +1,8 @@
 {
-  "name": "enhance/php-enhance-ssr",
-  "type": "project",
+  "name": "enhance-dev/enhance-ssr-php",
+  "description": "A PHP library for server-side rendering with Enhance",
+  "type": "library",
+  "license": "Apache2",
   "autoload": {
     "psr-4": {
       "Enhance\\": "src/",
@@ -9,7 +11,7 @@
   },
   "authors": [
     {
-      "name": "ryanbethel",
+      "name": "Ryan Bethel",
       "email": "ryan.bethel@gmail.com"
     }
   ],
@@ -19,13 +21,14 @@
     "sabberworm/php-css-parser": "^9.0@dev"
   },
   "scripts": {
-    "serve": "php -d ffi.enable=true -S localhost:8000 -t public",
+    "serve-wasm": "php -d ffi.enable=true -S localhost:8000 -t examples/wasm-ssr/public",
+    "serve": "php -S localhost:8000 -t examples/native-ssr/public",
     "test": "phpunit",
     "test-specific": "phpunit --filter $1",
-    "post-install-cmd": ["@composer addEnhanceSsrToVendor"],
-    "post-update-cmd": ["@composer addEnhanceSsrToVendor"],
-    "addEnhanceSsrToVendor": [
-      "mkdir -p vendor/enhance/ssr-wasm && cd \"$_\" && curl -L https://github.com/enhance-dev/enhance-ssr-wasm/releases/download/v0.0.3/enhance-ssr.wasm.gz | gunzip > enhance-ssr.wasm"
+    "post-install-cmd": ["@composer addEnhanceSsrWasmToVendor"],
+    "post-update-cmd": ["@composer addEnhanceSsrWasmToVendor"],
+    "addEnhanceSsrWasmToVendor": [
+      "mkdir -p vendor/enhance/ssr-wasm && cd \"$_\" && curl -L https://github.com/enhance-dev/enhance-ssr-wasm/releases/download/v0.0.4/enhance-ssr.wasm.gz | gunzip > enhance-ssr.wasm"
     ]
   },
   "require-dev": {

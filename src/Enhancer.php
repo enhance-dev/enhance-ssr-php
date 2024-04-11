@@ -151,7 +151,10 @@ class Enhancer
             &$collectedLinks,
             &$context
         ) {
-            if ($this->isCustomElement($child->tagName)) {
+            if (
+                $child instanceof DOMElement &&
+                $this->isCustomElement($child->tagName)
+            ) {
                 if ($this->elements->exists($child->tagName)) {
                     $expandedTemplate = $this->expandTemplate([
                         "node" => $child,
@@ -576,7 +579,7 @@ class Enhancer
 
     private static function generateRandomString($length = 10)
     {
-        return bin2hex(random_bytes($length / 2));
+        return bin2hex(random_bytes(intdiv($length, 2)));
     }
 
     public static function isCustomElement($tagName)
