@@ -1,5 +1,5 @@
 {
-  "name": "enhance-dev/enhance-ssr-php",
+  "name": "enhance-dev/ssr",
   "description": "A PHP library for server-side rendering with Enhance",
   "type": "library",
   "license": "Apache2",
@@ -12,7 +12,7 @@
   "authors": [
     {
       "name": "Ryan Bethel",
-      "email": "ryan.bethel@gmail.com"
+      "email": "ryan.bethel@begin.com"
     }
   ],
   "minimum-stability": "dev",
