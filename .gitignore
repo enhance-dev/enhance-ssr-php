@@ -2,4 +2,5 @@ vendor
 composer.lock
 enhance-ssr.wasm
 .phpunit.result.cache
+.phpunit.cache
 .DS_Store
