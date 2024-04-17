@@ -223,7 +223,7 @@ HTMLCONTENT;
         );
     }
 
-    public function testShouldNotRenderDefaultContentInUnnamedSlots()
+    public function testShouldRenderDefaultContentInUnnamedSlots()
     {
         global $allElements;
         $enhancer = new Enhancer([
@@ -233,7 +233,25 @@ HTMLCONTENT;
         ]);
 
         $htmlString = '<my-unnamed id="0"></my-unnamed>';
-        $expectedString = '<my-unnamed id="0"></my-unnamed>';
+        $expectedString = '<my-unnamed id="0">Default Content</my-unnamed>';
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "It fills named slots"
+        );
+    }
+    public function testShouldNotRenderDefaultContentInUnnamedSlotsWithWhiteSpace()
+    {
+        global $allElements;
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => true,
+            "enhancedAttr" => false,
+        ]);
+
+        $htmlString = '<my-unnamed id="0">  </my-unnamed>';
+        $expectedString = '<my-unnamed id="0">  </my-unnamed>';
 
         $this->assertSame(
             strip($expectedString),
@@ -1245,6 +1263,97 @@ HTMLDOC;
             strip($expectedString),
             strip($enhancer->ssr($htmlString)),
             "My Header style worked"
+        );
+    }
+    public function testEntityEncodedCaracters()
+    {
+        global $allElements;
+        $scopeMyStyle = new ShadyStyles();
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+            "styleTransforms" => [
+                function ($params) use ($scopeMyStyle) {
+                    return $scopeMyStyle->styleTransform($params);
+                },
+            ],
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        $head
+        <my-header>&amp;&times;</my-header>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                my-header h1 {
+                color: red;
+                }
+            </style>
+        </head>
+        <body>
+            <my-header><h1>&amp;&times;</h1></my-header>
+        </body>
+        </html>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "My Header style worked"
+        );
+    }
+
+    public function testCssNestingGlobalStyles()
+    {
+        global $allElements;
+        $scopeMyStyle = new ShadyStyles();
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+            "styleTransforms" => [
+                function ($params) use ($scopeMyStyle) {
+                    return $scopeMyStyle->styleTransform($params);
+                },
+            ],
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        $head
+        <e-tag>Test</e-tag>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          e-tag {
+            display: inline-flex;
+    
+            & button[type="remove"] {
+              padding-left: var(--e-space-xs);
+            }
+          }
+        </style>
+      </head>
+      <body><e-tag>Test</e-tag></body>
+    </html>
+HTMLDOC;
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Global Styles with nesting worked"
         );
     }
 }

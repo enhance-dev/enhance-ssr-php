@@ -490,7 +490,8 @@ class Enhancer
         return $attrs;
     }
 
-    public static function renderTemplate($params)
+
+    public function renderTemplate($params)
     {
         $name = $params["name"];
         $elements = $params["elements"];
@@ -498,72 +499,25 @@ class Enhancer
         $state = $params["state"] ?? [];
 
         $state["attrs"] = $attrs;
-        $doc = new DOMDocument(1.0, "UTF-8");
+        $doc = new DOMDocument();
         $rendered = $elements->execute($name, $state);
-        // $config = [
-        //     "clean" => true,
-        //     "output-xhtml" => true,
-        //     "show-body-only" => true,
-        //     "wrap" => 0,
-        // ];
-        // $html =
-        //     "<!DOCTYPE html><html><head><title>Fragment</title></head><body>" .
-        //     $rendered .
-        //     "</body></html>";
+        libxml_use_internal_errors(true); // Again, suppressing errors for robustness
+        $cleanRendered = "<template>{$rendered}</template>";
 
-        // $cleanRendered = tidy_repair_string($rendered, $config, "utf8");
-        // $cleanRendered = $rendered;
+        $doc->loadHTML(
+            $cleanRendered,
+            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+        );
+
         $fragment = $doc->createDocumentFragment();
-        $fragment->appendXML($rendered);
+
+        $template = $doc->getElementsByTagName("template")->item(0);
+        $children = iterator_to_array($template->childNodes);
+        foreach ($children as $child) {
+            $fragment->appendChild($child);
+        }
         return $fragment;
     }
-
-    // public function renderTemplate($params)
-    // {
-    //     $name = $params["name"];
-    //     $elements = $params["elements"];
-    //     $attrs = $params["attrs"] ?? [];
-    //     $state = $params["state"] ?? [];
-
-    //     $state["attrs"] = $attrs;
-    //     $doc = new DOMDocument();
-    //     $doc->preserveWhiteSpace = false;
-    //     $doc->formatOutput = true;
-    //     $rendered = $elements->execute($name, $state);
-    //     $config = [
-    //         // "clean" => true,
-    //         "output-html" => true,
-    //         "show-body-only" => true,
-    //         "wrap" => 0,
-    //     ];
-
-    //     $html =
-    //         "<!DOCTYPE html><html><head><title>Fragment</title></head><body>" .
-    //         $rendered .
-    //         "</body></html>";
-
-    //     // libxml_use_internal_errors(true); // Again, suppressing errors for robustness
-    //     $cleanRendered = tidy_repair_string($html, $config, "utf8");
-
-    //     print_r("cleaned: \n");
-    //     print_r($cleanRendered);
-    //     @$doc->loadHTML(
-    //         $cleanRendered,
-    //         // LIBXML_HTML_NODEFDTD
-    //         LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
-    //     );
-
-    //     print_r("renderTemplate: \n");
-    //     print_r($doc->saveHTML());
-    //     $fragment = $doc->createDocumentFragment();
-
-    //     $body = $doc->getElementsByTagName("body")->item(0);
-    //     foreach ($body->childNodes as $child) {
-    //         $fragment->appendChild($child);
-    //     }
-
-    //     return $fragment;
-    // }
 
     private function walk($node, $callback)
     {
