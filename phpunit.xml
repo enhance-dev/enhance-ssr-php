@@ -4,7 +4,8 @@
   bootstrap="vendor/autoload.php"
   testdox="true"
   colors="true"
-  displayDetailsOnTestsThatTriggerWarnings="false"
+  displayDetailsOnTestsThatTriggerWarnings="true"
+  displayDetailsOnTestsThatTriggerDeprecations="true"
   cacheDirectory=".phpunit.cache">
   <testsuites>
     <testsuite name="My Test Suite">

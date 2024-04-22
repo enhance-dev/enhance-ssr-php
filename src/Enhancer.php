@@ -51,7 +51,11 @@ class Enhancer
     public function ssr($htmlString)
     {
         $doc = new DOMDocument(1.0, "UTF-8");
-        @$doc->loadHTML($htmlString, LIBXML_HTML_NODEFDTD | LIBXML_NOERROR);
+        // $convmap = array(0x80, 0xFFFF, 0, 0xFFFF);
+        // $encodedHtml = mb_encode_numericentity($htmlString, $convmap, 'UTF-8');
+        // @$doc->loadHTML($encodedHtml, LIBXML_HTML_NODEFDTD | LIBXML_NOERROR );
+        @$doc->loadHTML('<?xml encoding="utf-8"?>' . $htmlString);
+
 
         $htmlElement = $doc->getElementsByTagName("html")->item(0);
         $bodyElement = $htmlElement
@@ -108,12 +112,12 @@ class Enhancer
                     return 0;
                 });
                 $mergedCssString = implode("\n", $values);
-                $mergedStyles = $mergedCssString
-                    ? "<style>{$mergedCssString}</style>"
-                    : "";
+                $mergedStyles = $mergedCssString ? 
+                  "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>{$mergedCssString}</style></head><body></body></html>" 
+                  : "";
 
                 $tempDoc = new DOMDocument(1.0, "UTF-8");
-                $tempDoc->loadHTML($mergedStyles, LIBXML_HTML_NODEFDTD);
+                $tempDoc->loadHTML($mergedStyles, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
                 $loadedStyle = $tempDoc->getElementsByTagName("style")->item(0);
                 $importedStyles = $headElement->ownerDocument->importNode(
                     $loadedStyle,
@@ -135,7 +139,7 @@ class Enhancer
         }
 
         $doc->encoding = "UTF-8";
-        return $doc->saveHTML();
+        return "<!DOCTYPE html>" . $doc->saveHTML($doc->documentElement);
     }
 
     private function processCustomElements(&$node)
@@ -499,11 +503,20 @@ class Enhancer
         $state = $params["state"] ?? [];
 
         $state["attrs"] = $attrs;
-        $doc = new DOMDocument();
+        $doc = new DOMDocument(1.0, "UTF-8");
         $rendered = $elements->execute($name, $state);
-        libxml_use_internal_errors(true); // Again, suppressing errors for robustness
-        $cleanRendered = "<template>{$rendered}</template>";
+        libxml_use_internal_errors(true); 
+    $cleanRendered = <<<HTMLDOC
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+      </head>
+    <body><template>{$rendered}</template></body>
+    </html>
+    HTMLDOC;
 
+        $doc->encoding = "UTF-8";
         $doc->loadHTML(
             $cleanRendered,
             LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD

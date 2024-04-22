@@ -23,7 +23,7 @@ class EnhancerTest extends TestCase
         $htmlString =
             "<html><head><title>Test</title></head><body>Content</body></html>";
         $expectedString =
-            "<html><head><title>Test</title></head><body>Content</body></html>";
+        "<!DOCTYPE html><html><head><title>Test</title></head><body>Content</body></html>";
 
         $this->assertSame(
             strip($expectedString),
@@ -32,7 +32,7 @@ class EnhancerTest extends TestCase
         );
 
         $htmlString = "Fragment content";
-        $expectedString = "<html><body><p>Fragment content</p></body></html>";
+        $expectedString = "<!DOCTYPE html><html><body><p>Fragment content</p></body></html>";
 
         $this->assertSame(
             strip($expectedString),
@@ -43,7 +43,7 @@ class EnhancerTest extends TestCase
         $htmlString =
             "<div><div><my-heading></my-heading></div></div><my-heading></my-heading>";
         $expectedString =
-            "<html><body><div><div><my-heading><h1></h1></my-heading></div></div><my-heading><h1></h1></my-heading></body></html>";
+            "<!DOCTYPE html><html><body><div><div><my-heading><h1></h1></my-heading></div></div><my-heading><h1></h1></my-heading></body></html>";
 
         $this->assertSame(
             strip($expectedString),
@@ -1298,7 +1298,7 @@ HTML;
             </style>
         </head>
         <body>
-            <my-header><h1>&amp;&times;</h1></my-header>
+            <my-header><h1>&amp;×</h1></my-header>
         </body>
         </html>
 HTMLDOC;
@@ -1356,8 +1356,83 @@ HTMLDOC;
             "Global Styles with nesting worked"
         );
     }
-}
 
+    public function testUnicodeInCss()
+    {
+        global $allElements;
+        $scopeMyStyle = new ShadyStyles();
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+            "styleTransforms" => [
+                function ($params) use ($scopeMyStyle) {
+                    return $scopeMyStyle->styleTransform($params);
+                },
+            ],
+        ]);
+
+        $head = HeadTag();
+
+        $htmlString = <<<HTML
+        $head
+        <e-button>×</e-button>
+HTML;
+
+        $expectedString = <<<HTMLDOC
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+    e-button {&::before {content: "×";}}
+        </style>
+      </head>
+    <body><e-button>×</e-button></body>
+    </html>
+HTMLDOC;
+
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Global Styles with nesting worked"
+        );
+    }
+    public function testUnknownEncoding()
+    {
+        global $allElements;
+        $scopeMyStyle = new ShadyStyles();
+        $enhancer = new Enhancer([
+            "elements" => $allElements,
+            "bodyContent" => false,
+            "enhancedAttr" => false,
+            "styleTransforms" => [
+                function ($params) use ($scopeMyStyle) {
+                    return $scopeMyStyle->styleTransform($params);
+                },
+            ],
+        ]);
+
+
+        $htmlString = 'hi</b><p>سلام<div>の家庭に、9 ☆';
+
+        $expectedString = <<<HTMLDOC
+    <!DOCTYPE html>
+    <html>
+    <body>
+       <p>hi</p><p>سلام</p><div>の家庭に、9 ☆</div>
+    </body>
+    </html>
+HTMLDOC;
+
+
+        $this->assertSame(
+            strip($expectedString),
+            strip($enhancer->ssr($htmlString)),
+            "Global Styles with nesting worked"
+        );
+    }
+}
 function HeadTag()
 {
     return <<<HTML
