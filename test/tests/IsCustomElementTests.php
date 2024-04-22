@@ -39,4 +39,3 @@ class IsCustomElementTests extends TestCase
         );
     }
 }
-?>

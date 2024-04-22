@@ -1449,4 +1449,3 @@ function strip($str)
 {
     return preg_replace('/\r?\n|\r|\s\s+/u', "", $str);
 }
-?>

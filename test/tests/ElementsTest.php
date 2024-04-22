@@ -29,4 +29,3 @@ class ElementsTest extends TestCase
     }
 }
 
-?>
