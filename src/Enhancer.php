@@ -271,9 +271,15 @@ class Enhancer
 
             $slotDocument = $slot->ownerDocument;
             $slotParent = $slot->parentNode;
-            foreach ($unnamedChildren as $child) {
+            if (count($unnamedChildren)) {
+              foreach ($unnamedChildren as $child) {
                 $importedNode = $slotDocument->importNode($child, true);
                 $slotParent->insertBefore($importedNode, $slot);
+              }
+            }  else {
+              foreach ($slot->childNodes as $child) {
+                $slotParent->insertBefore($child, $slot);
+              }
             }
             $slotParent->removeChild($slot);
         }
