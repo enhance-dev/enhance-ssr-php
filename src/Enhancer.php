@@ -277,7 +277,7 @@ class Enhancer
                 $slotParent->insertBefore($importedNode, $slot);
               }
             }  else {
-              foreach ($slot->childNodes as $child) {
+              foreach (iterator_to_array($slot->childNodes) as $child) {
                 $slotParent->insertBefore($child, $slot);
               }
             }
