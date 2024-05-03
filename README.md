@@ -4,7 +4,8 @@ A library for server rendering web components in PHP that is compatible with Enh
 
 ## Runtime: WASM or native PHP
 
-This package includes both a WASM and native PHP version of enhance ssr. The WASM version allows component definitions written in JavaScript.
+This package includes both a WASM and native PHP version of enhance ssr.
+The WASM version allows component definitions written in JavaScript, but has specific requirements for the hosting environment that may be challenging.
 The examples directory includes examples of both versions.
 
 ## Install
