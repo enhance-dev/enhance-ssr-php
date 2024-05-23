@@ -14,6 +14,9 @@ This package can be managed and installed with Composer:
 ```sh
 composer require enhance-dev/ssr
 ```
+
+The Extism dependency currently requires `"minimum-stability":"dev"` in the `composer.json` file.
+
 ## Run Examples
 To run the native and WASM examples run `composer serve-native` or `composer serve-wasm` respectively. 
 
