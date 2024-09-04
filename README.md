@@ -52,7 +52,7 @@ $htmlString = <<<HTMLDOC
        <head>
        </head>
        <body>
-           <my-header><h1>Hello World</h1></my-header>
+           <my-header>Hello World</my-header>
        </body>
        </html>
 HTMLDOC;
